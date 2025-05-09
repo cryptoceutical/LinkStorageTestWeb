@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Submission Form</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .success-message, .error-message {
+            padding: 12px;
+            margin-top: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .saved-links {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+
+        .saved-links h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .link-list {
+            list-style: none;
+        }
+
+        .link-list li {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+        .link-list li a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        .link-list li a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Link Submission</h1>
+        <form id="linkForm">
+            <div class="form-group">
+                <label for="link">Enter URL</label>
+                <input type="url" id="link" name="link" placeholder="https://example.com" required>
+            </div>
+            <button type="submit">Save Link</button>
+        </form>
+        <div class="success-message" id="successMessage">Link saved successfully!</div>
+        <div class="error-message" id="errorMessage">There was an error saving your link.</div>
+
+        <div class="saved-links">
+            <h2>Saved Links</h2>
+            <ul class="link-list" id="linkList">
+                <!-- Saved links will appear here -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const linkForm = document.getElementById('linkForm');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            const linkList = document.getElementById('linkList');
+
+            // Load existing links on page load
+            fetchLinks();
+
+            linkForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const linkInput = document.getElementById('link');
+                const url = linkInput.value.trim();
+                
+                if (!url) return;
+
+                try {
+                    const response = await fetch('/api/links', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ url })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+
+                    // Show success message
+                    successMessage.style.display = 'block';
+                    errorMessage.style.display = 'none';
+                    
+                    // Clear form
+                    linkForm.reset();
+                    
+                    // Refresh the links list
+                    fetchLinks();
+                    
+                    // Hide success message after 3 seconds
+                    setTimeout(() => {
+                        successMessage.style.display = 'none';
+                    }, 3000);
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    errorMessage.style.display = 'block';
+                    successMessage.style.display = 'none';
+                    
+                    // Hide error message after 3 seconds
+                    setTimeout(() => {
+                        errorMessage.style.display = 'none';
+                    }, 3000);
+                }
+            });
+
+            async function fetchLinks() {
+                try {
+                    const response = await fetch('/api/links');
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    
+                    const links = await response.json();
+                    
+                    // Clear current list
+                    linkList.innerHTML = '';
+                    
+                    // Add links to the list
+                    if (links.length === 0) {
+                        linkList.innerHTML = '<li>No links saved yet.</li>';
+                    } else {
+                        links.forEach(link => {
+                            const li = document.createElement('li');
+                            const a = document.createElement('a');
+                            a.href = link.url;
+                            a.target = '_blank';
+                            a.textContent = link.url;
+                            li.appendChild(a);
+                            linkList.appendChild(li);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error fetching links:', error);
+                    linkList.innerHTML = '<li>Error loading saved links.</li>';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
